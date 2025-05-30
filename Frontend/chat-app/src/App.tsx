@@ -1,37 +1,42 @@
 import { useState } from 'react'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
-  const [displaySidebar, setDisplaySidebar] = useState(true);
+const App: React.FC = () => {
+  const [userId, setUserId] = useState<number | null>(null)
+  const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
+
+  const handleLogin = async (username: string) => {
+    const response = await fetch('https://localhost:8080/api/users', {
+      method: 'Post',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email: `${username}@example.com` }),
+    });
+    const user = await response.json();
+    setUserId(user.id);
+  };
 
   return (
-    <>
-      <div>
-        <h1 className="text-4xl text-center p-5 font-bold text-blue-700">Chat App</h1>
-      </div>
-      <div className="grid grid-cols-2 ">
-        <div className="bg-green-100">{displaySidebar ? "open" : "close"} Sidebar
-          <div>Chat 1</div>
-          <div>Group - 1</div>
-        </div>
-        <div>Chat</div>
-      </div>
-
-      <div>
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <button onClick={() => setDisplaySidebar((displaySidebar) => !displaySidebar)}>
-          Show/Hide Sidebar
-        </button>
-      </div>
-
-      <p>
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="flex h-screen bg-gray-100">
+      {
+        !userId ? (
+          <div className="flex m-auto">
+            <div className='font-bold p-2'>Username: </div>
+            <input type="text"
+              placeholder="Enter Username"
+              className="p-2 border rounded"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleLogin(e.currentTarget.value);
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <ChatList userId={userId} onSelectChat={setSelectedChatId} />
+            {selectedChatId && <ChatWindow userId={userId} chatId={selectedChatId} />}
+          </>
+        )}
+    </div>
+  );
+};
 
 export default App
