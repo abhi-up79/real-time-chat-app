@@ -44,7 +44,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
         client.activate();
         clientRef.current = client;
 
-        return = () => {
+        return () => {
             client.deactivate();
         };
     }, [chatId]);
@@ -60,7 +60,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
     };
 
     return (
-        
+        <div className="flex-1 flex flex-col p-4">
+            <div className="flex-1 overflow-y-auto">
+                {messages.map((msg) => (
+                    <div
+                        key={msg.id}
+                        className={`mb-2 p-2 rounded ${
+                            msg.sender.id === userId ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
+                        }`}
+                    >
+                        <p>{msg.content}</p>
+                        <small>{new Date(msg.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                ))}
+            </div>
+            <div className="flex">
+                <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="flex-1 p-2 border rounded"
+                    placeholder="Type a message"
+                />
+                <button onClick={sendMessage} className="ml-2 bg-blue-500 text-white p-2 rounded">
+                    Send
+                </button>
+            </div>
+        </div>
     );
 }
 

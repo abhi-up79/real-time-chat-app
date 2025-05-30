@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import './App.css'
+import ChatList from './components/ChatList';
+import ChatWindow from './components/ChatWindow';
 
 const App: React.FC = () => {
   const [userId, setUserId] = useState<number | null>(null)
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
 
   const handleLogin = async (username: string) => {
-    const response = await fetch('https://localhost:8080/api/users', {
-      method: 'Post',
+    const response = await fetch('http://localhost:8080/api/users', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email: `${username}@example.com` }),
     });
@@ -16,6 +18,7 @@ const App: React.FC = () => {
   };
 
   return (
+    <>
     <div className="flex h-screen bg-gray-100">
       {
         !userId ? (
@@ -36,6 +39,7 @@ const App: React.FC = () => {
           </>
         )}
     </div>
+  </>
   );
 };
 

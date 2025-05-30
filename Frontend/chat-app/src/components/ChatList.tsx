@@ -19,10 +19,14 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
 
     useEffect(() => {
         const fetchChats = async () => {
-            const response = await axios.get(`http://localhost:8080/api/${userId}/chats`);
+            const response = await axios.get(`http://localhost:8080/api/users/${userId}/chats`);
             setChats(response.data);
         };
         fetchChats();
+
+        const interval = setInterval(fetchChats, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
     }, [userId]);
 
     const createChat = async () => {
