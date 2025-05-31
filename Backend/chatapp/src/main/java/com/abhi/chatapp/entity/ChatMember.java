@@ -1,4 +1,4 @@
-package com.abhi.chatapp.model;
+package com.abhi.chatapp.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
