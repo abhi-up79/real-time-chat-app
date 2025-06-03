@@ -1,72 +1,233 @@
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
-
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useAuth } from "../auth/useAuth";
 
 interface Message {
     id: number;
     chat: {id: number};
-    sender: {id: number};
+    sender: {id: string};
     content: string;
     timestamp: string;
 }
 
 interface ChatWindowProps {
-    userId: number;
+    userId: string | null;
     chatId: number;
+}
+
+interface ExtendedClient extends Client {
+    subscription?: any;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
-    const clientRef = useRef<Client | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
+    const clientRef = useRef<ExtendedClient | null>(null);
+    const { getToken } = useAuth();
+    const connectionAttemptRef = useRef<boolean>(false);
+    const isComponentMountedRef = useRef<boolean>(true);
+
+    const setupWebSocket = useCallback(async () => {
+        if (connectionAttemptRef.current || !isComponentMountedRef.current) {
+            console.log('Connection attempt already in progress or component unmounted');
+            return;
+        }
+        connectionAttemptRef.current = true;
+
+        try {
+            const token = await getToken();
+            if (!token) {
+                console.error('No authentication token available');
+                setConnectionError('Authentication failed. Please log in again.');
+                connectionAttemptRef.current = false;
+                return;
+            }
+
+            console.log('Setting up WebSocket connection with token:', token.substring(0, 10) + '...');
+            
+            // Clean up existing client if any
+            if (clientRef.current) {
+                try {
+                    if (clientRef.current.subscription) {
+                        clientRef.current.subscription.unsubscribe();
+                    }
+                    clientRef.current.deactivate();
+                } catch (error) {
+                    console.error('Error cleaning up existing client:', error);
+                }
+                clientRef.current = null;
+            }
+            
+            const client = new Client({
+                webSocketFactory: () => new SockJS('http://localhost:8080/chat'),
+                connectHeaders: {
+                    Authorization: `Bearer ${token}`
+                },
+                reconnectDelay: 5000,
+                heartbeatIncoming: 4000,
+                heartbeatOutgoing: 4000,
+                debug: (str) => {
+                    console.log('STOMP Debug:', str);
+                },
+                onStompError: (frame) => {
+                    if (!isComponentMountedRef.current) return;
+                    console.error('STOMP error:', frame.headers['message'], frame.body);
+                    setIsConnected(false);
+                    setConnectionError(`STOMP Error: ${frame.headers['message'] || 'Unknown error'}`);
+                    connectionAttemptRef.current = false;
+                },
+                onWebSocketError: (event) => {
+                    if (!isComponentMountedRef.current) return;
+                    console.error('WebSocket error:', event);
+                    setIsConnected(false);
+                    setConnectionError('Connection error. Please check your internet connection.');
+                    connectionAttemptRef.current = false;
+                },
+                onWebSocketClose: (event) => {
+                    if (!isComponentMountedRef.current) return;
+                    console.log('WebSocket closed:', event);
+                    setIsConnected(false);
+                    if (!event.wasClean) {
+                        setConnectionError('Connection lost. Attempting to reconnect...');
+                    } else {
+                        console.log('WebSocket closed cleanly');
+                    }
+                    connectionAttemptRef.current = false;
+                }
+            }) as ExtendedClient;
+
+            client.onConnect = (frame) => {
+                if (!isComponentMountedRef.current) return;
+                console.log('WebSocket connected successfully', frame);
+                setIsConnected(true);
+                setConnectionError(null);
+                connectionAttemptRef.current = false;
+                
+                // Subscribe to the chat topic
+                if (client) {
+                    try {
+                        console.log('Subscribing to chat topic:', `/topic/chat/${chatId}`);
+                        const subscription = client.subscribe(`/topic/chat/${chatId}`, (message) => {
+                            if (!isComponentMountedRef.current) return;
+                            try {
+                                console.log('Received message:', message.body);
+                                const msg: Message = JSON.parse(message.body);
+                                setMessages((prev) => [...prev, msg]);
+                            } catch (error) {
+                                console.error('Error processing message:', error);
+                            }
+                        });
+
+                        // Store subscription for cleanup
+                        client.subscription = subscription;
+                        clientRef.current = client;
+                        console.log('Successfully subscribed to chat topic');
+                    } catch (error) {
+                        console.error('Error subscribing to chat topic:', error);
+                        setConnectionError('Failed to subscribe to chat. Please refresh the page.');
+                        connectionAttemptRef.current = false;
+                    }
+                }
+            };
+
+            try {
+                console.log('Activating WebSocket connection...');
+                await client.activate();
+            } catch (error) {
+                if (!isComponentMountedRef.current) return;
+                console.error('Failed to activate WebSocket:', error);
+                setIsConnected(false);
+                setConnectionError('Failed to connect to chat server. Please refresh the page.');
+                connectionAttemptRef.current = false;
+            }
+        } catch (error) {
+            if (!isComponentMountedRef.current) return;
+            console.error('Failed to setup WebSocket:', error);
+            setIsConnected(false);
+            setConnectionError('Failed to setup chat connection. Please refresh the page.');
+            connectionAttemptRef.current = false;
+        }
+    }, [chatId, getToken]);
 
     useEffect(() => {
         const fetchMessages = async () => {
-            const response = await axios.get(`http://localhost:8080/api/chats/${chatId}/messages`);
-            setMessages(response.data);
-        }
-        fetchMessages();
-
-        const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8080/chat'),
-            reconnectDelay: 5000,
-        });
-
-        client.onConnect = () => {
-            client.subscribe(`/topic/chat/${chatId}`, (message) => {
-                const msg: Message = JSON.parse(message.body);
-                setMessages((prev) => [...prev, msg]);
-            });
+            try {
+                const token = await getToken();
+                const response = await axios.get(
+                    `http://localhost:8080/api/chats/${chatId}/messages`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+                setMessages(response.data);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
         };
 
-        client.activate();
-        clientRef.current = client;
+        isComponentMountedRef.current = true;
+        fetchMessages();
+        setupWebSocket();
 
         return () => {
-            client.deactivate();
+            isComponentMountedRef.current = false;
+            if (clientRef.current) {
+                try {
+                    if (clientRef.current.subscription) {
+                        clientRef.current.subscription.unsubscribe();
+                    }
+                    clientRef.current.deactivate();
+                } catch (error) {
+                    console.error('Error deactivating WebSocket:', error);
+                }
+                clientRef.current = null;
+                setIsConnected(false);
+                setConnectionError(null);
+                connectionAttemptRef.current = false;
+            }
         };
-    }, [chatId]);
+    }, [chatId, getToken, setupWebSocket]);
 
-    const sendMessage = () => {
-        if (newMessage && clientRef.current?.active) {
-            clientRef.current.publish({
+    const sendMessage = async () => {
+        if (!userId || !newMessage || !clientRef.current?.active) {
+            console.log('Cannot send message:', { userId, newMessage, active: clientRef.current?.active });
+            return;
+        }
+
+        const payload = { senderId: userId, content: newMessage };
+        console.log('Publishing message:', payload);
+        try {
+            await clientRef.current.publish({
                 destination: `/app/chat/${chatId}`,
-                body: JSON.stringify({ senderId: userId, content: newMessage}),
+                body: JSON.stringify(payload),
             });
             setNewMessage('');
+            console.log('Message published');
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setConnectionError('Failed to send message. Please try again.');
         }
     };
 
     return (
         <div className="flex-1 flex flex-col p-4">
+            {!isConnected && (
+                <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4" role="alert">
+                    <p>Connecting to chat server...</p>
+                </div>
+            )}
             <div className="flex-1 overflow-y-auto">
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
                         className={`mb-2 p-2 rounded ${
-                            msg.sender.id === userId ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
+                            userId && msg.sender.id === userId ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
                         }`}
                     >
                         <p>{msg.content}</p>
@@ -81,8 +242,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="flex-1 p-2 border rounded"
                     placeholder="Type a message"
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    disabled={!isConnected}
                 />
-                <button onClick={sendMessage} className="ml-2 bg-blue-500 text-white p-2 rounded">
+                <button 
+                    onClick={sendMessage} 
+                    className={`ml-2 p-2 rounded ${
+                        isConnected ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-500'
+                    }`}
+                    disabled={!isConnected}
+                >
                     Send
                 </button>
             </div>

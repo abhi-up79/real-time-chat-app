@@ -26,8 +26,7 @@ services:
     image: confluentinc/cp-kafka:7.4.4
     depends_on:
       - kafka
-    entrypoint: [ "/bin/sh", "-c" ]
-    command: |
-      while ! nc -z kafka 9092; do sleep 1; done
-      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
-      --topic message_persist --partitions 1 --replication-factor 1
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 10 &&
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic message_persist --partitions 1 --replication-factor 1"
