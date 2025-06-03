@@ -52,7 +52,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
             }
 
             const client = new Client({
-                webSocketFactory: () => new SockJS('http://localhost:8080/chat'),
+                webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
                 connectHeaders: {
                     Authorization: `Bearer ${token}`
                 },
