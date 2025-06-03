@@ -37,7 +37,7 @@ public class SecurityConfig {
             .and()
             .csrf().disable()
             .authorizeHttpRequests()
-            .requestMatchers("/chat/**").permitAll()
+            .requestMatchers("/chat/**", "/ws/**", "/topic/**", "/app/**", "/chat/info/**").permitAll()
             .requestMatchers("/api/**").authenticated()
             .anyRequest().authenticated()
             .and()
@@ -65,8 +65,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost", "http://localhost:80"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
@@ -74,11 +74,16 @@ public class SecurityConfig {
             "Accept",
             "Origin",
             "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
+            "Access-Control-Request-Headers",
+            "Sec-WebSocket-Protocol",
+            "Sec-WebSocket-Extensions",
+            "Sec-WebSocket-Key",
+            "Sec-WebSocket-Version"
         ));
         configuration.setExposedHeaders(Arrays.asList(
             "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials"
+            "Access-Control-Allow-Credentials",
+            "Access-Control-Allow-Headers"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

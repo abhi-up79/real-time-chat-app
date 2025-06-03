@@ -1,123 +1,158 @@
 # Real-Time Chat Application
 
-A modern, full-stack real-time chat application built with Spring Boot, React, and WebSocket technology. This application demonstrates advanced features like real-time messaging, user authentication, and scalable message handling using Kafka.
+A modern, scalable real-time chat application built with React, Spring Boot, and Kafka. This project demonstrates advanced concepts in real-time communication, microservices architecture, and cloud-native development.
 
-## 🌟 Key Features
+![Tech Stack](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?style=for-the-badge&logo=apache-kafka&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-- **Real-Time Messaging**: Instant message delivery using WebSocket (STOMP) protocol
-- **Secure Authentication**: OAuth2-based authentication using Auth0
-- **Scalable Architecture**: Message persistence using Apache Kafka
-- **Modern UI**: Clean and responsive interface built with React and Tailwind CSS
-- **Group Chats**: Support for both one-on-one and group conversations
-- **Message History**: Persistent message storage with MySQL database
-- **Real-Time Notifications**: Instant updates for new messages and chat invitations
+## 🌟 Features
+
+- **Real-time Messaging**: Instant message delivery using WebSocket technology
+- **Group & Private Chats**: Support for both one-on-one and group conversations
+- **Message Persistence**: Reliable message storage using Kafka and MySQL
+- **Authentication**: Secure user authentication using Auth0
+- **Responsive Design**: Modern UI that works seamlessly across all devices
+- **Scalable Architecture**: Microservices-based design for easy scaling
+- **Containerized Deployment**: Docker-based deployment for consistent environments
 
 ## 🏗️ Architecture
 
-### Backend (Spring Boot)
-- **WebSocket**: Real-time bidirectional communication
-- **Kafka**: Message persistence and scalability
-- **Spring Security**: OAuth2 resource server with Auth0 integration
-- **JPA/Hibernate**: Database operations and entity management
-- **MySQL**: Persistent data storage
+The application follows a modern microservices architecture:
 
-### Frontend (React + TypeScript)
-- **React**: Modern UI components and state management
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling
-- **Auth0 React SDK**: Secure authentication
-- **STOMP.js**: WebSocket client implementation
+```
+real-time-chat-app/
+├── Frontend/           # React + TypeScript SPA
+│   ├── src/           # Source code
+│   │   ├── components/    # React components
+│   │   ├── services/      # API and WebSocket services
+│   │   └── auth/          # Authentication logic
+│   ├── Dockerfile     # Production container config
+│   └── nginx.conf     # Nginx reverse proxy config
+├── Backend/           # Spring Boot microservice
+│   ├── src/           # Source code
+│   │   ├── controller/    # REST endpoints
+│   │   ├── service/       # Business logic
+│   │   ├── repository/    # Data access
+│   │   └── config/        # Application config
+│   └── Dockerfile     # Production container config
+└── docker-compose.yml # Service orchestration
+```
 
-## 🚀 Getting Started
+## 🚀 Technology Stack
+
+### Frontend
+- **React 18**: Modern UI library with hooks
+- **TypeScript**: Type-safe JavaScript
+- **Vite**: Next-generation frontend tooling
+- **Tailwind CSS**: Utility-first CSS framework
+- **SockJS/STOMP**: WebSocket client libraries
+
+### Backend
+- **Spring Boot 3**: Enterprise Java framework
+- **Spring Security**: Authentication and authorization
+- **Spring WebSocket**: Real-time communication
+- **Spring Data JPA**: Data persistence
+- **Kafka**: Message streaming and persistence
+- **MySQL**: Relational database
+
+### Infrastructure
+- **Docker**: Containerization
+- **Docker Compose**: Service orchestration
+- **Nginx**: Reverse proxy and static file serving
+- **Auth0**: Identity and access management
+
+## 🛠️ Getting Started
 
 ### Prerequisites
-- Java 17 or higher
-- Node.js 16 or higher
-- MySQL 8.0
-- Apache Kafka
-- Auth0 account
 
-### Backend Setup
-1. Configure MySQL database:
-   ```sql
-   CREATE DATABASE chatapp;
-   ```
+- Docker and Docker Compose
+- Node.js 18+ (for local frontend development)
+- Java 17+ (for local backend development)
+- Maven (for local backend development)
+- Auth0 account (for authentication)
 
-2. Configure Kafka:
-   - Start Zookeeper
-   - Start Kafka server
-   - Create necessary topics
+### Environment Setup
 
-3. Update `application.properties` with your configurations:
-   - Database credentials
-   - Kafka settings
-   - Auth0 credentials
+1. Create a `.env` file in the root directory:
+```env
+AUTH0_ISSUER_URI=your_auth0_issuer_uri
+AUTH0_AUDIENCE=your_auth0_audience
+```
 
-4. Run the Spring Boot application:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
+### Running with Docker
 
-### Frontend Setup
-1. Install dependencies:
-   ```bash
-   cd Frontend/chat-app
-   npm install
-   ```
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd real-time-chat-app
+```
 
-2. Configure Auth0:
-   - Create an Auth0 application
-   - Update `auth0-config.ts` with your credentials
+2. Start all services:
+```bash
+docker-compose up --build
+```
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+3. Access the application:
+- Frontend: http://localhost
+- Backend API: http://localhost:8080
+
+### Local Development
+
+#### Frontend Development
+```bash
+cd Frontend
+npm install
+npm run dev
+```
+
+#### Backend Development
+```bash
+cd Backend
+./mvnw clean package
+./mvnw spring-boot:run
+```
 
 ## 🔒 Security Features
 
-- OAuth2-based authentication with Auth0
-- JWT token validation
+- JWT-based authentication with Auth0
 - Secure WebSocket connections
-- Protected API endpoints
 - CORS configuration
 - Input validation and sanitization
+- Rate limiting
+- Secure password handling
 
-## 📦 Technologies Used
+## 📈 Performance Optimizations
 
-### Backend
-- Spring Boot 3.x
-- Spring WebSocket
-- Spring Security
-- Spring Data JPA
-- Apache Kafka
-- MySQL
-- Lombok
+- WebSocket connection pooling
+- Message batching
+- Efficient database queries
+- Caching strategies
+- Optimized Docker images
+- Nginx load balancing
 
-### Frontend
-- React 19
-- TypeScript
-- Tailwind CSS
-- Auth0 React SDK
-- STOMP.js
-- Axios
-- React Router
-
-## 🛠️ Development
-
-### Code Quality
-- ESLint for code linting
-- TypeScript for type safety
-- Prettier for code formatting
-
-### Testing
-- JUnit for backend testing
-- React Testing Library for frontend testing
-
-## 👥 Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+Your Name
+- GitHub: [@yourusername](https://github.com/yourusername)
+- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
+
+## 🙏 Acknowledgments
+
+- Spring Boot team for the amazing framework
+- React team for the frontend library
+- Apache Kafka team for the message broker
+- Auth0 for authentication services

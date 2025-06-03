@@ -21,11 +21,11 @@ interface ExtendedClient extends Client {
     subscription?: any;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isConnected, setIsConnected] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const clientRef = useRef<ExtendedClient | null>(null);
     const { getToken } = useAuth();
     const connectionAttemptRef = useRef<boolean>(false);
@@ -42,7 +42,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
             const token = await getToken();
             if (!token) {
                 console.error('No authentication token available');
-                setConnectionError('Authentication failed. Please log in again.');
+                setError('Authentication failed. Please log in again.');
                 connectionAttemptRef.current = false;
                 return;
             }
@@ -63,7 +63,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
             }
             
             const client = new Client({
-                webSocketFactory: () => new SockJS('http://localhost:8080/chat'),
+                webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
                 connectHeaders: {
                     Authorization: `Bearer ${token}`
                 },
@@ -77,14 +77,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                     if (!isComponentMountedRef.current) return;
                     console.error('STOMP error:', frame.headers['message'], frame.body);
                     setIsConnected(false);
-                    setConnectionError(`STOMP Error: ${frame.headers['message'] || 'Unknown error'}`);
+                    setError(`STOMP Error: ${frame.headers['message'] || 'Unknown error'}`);
                     connectionAttemptRef.current = false;
                 },
                 onWebSocketError: (event) => {
                     if (!isComponentMountedRef.current) return;
                     console.error('WebSocket error:', event);
                     setIsConnected(false);
-                    setConnectionError('Connection error. Please check your internet connection.');
+                    setError('Connection error. Please check your internet connection.');
                     connectionAttemptRef.current = false;
                 },
                 onWebSocketClose: (event) => {
@@ -92,7 +92,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                     console.log('WebSocket closed:', event);
                     setIsConnected(false);
                     if (!event.wasClean) {
-                        setConnectionError('Connection lost. Attempting to reconnect...');
+                        setError('Connection lost. Attempting to reconnect...');
                     } else {
                         console.log('WebSocket closed cleanly');
                     }
@@ -104,7 +104,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                 if (!isComponentMountedRef.current) return;
                 console.log('WebSocket connected successfully', frame);
                 setIsConnected(true);
-                setConnectionError(null);
+                setError(null);
                 connectionAttemptRef.current = false;
                 
                 // Subscribe to the chat topic
@@ -128,7 +128,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                         console.log('Successfully subscribed to chat topic');
                     } catch (error) {
                         console.error('Error subscribing to chat topic:', error);
-                        setConnectionError('Failed to subscribe to chat. Please refresh the page.');
+                        setError('Failed to subscribe to chat. Please refresh the page.');
                         connectionAttemptRef.current = false;
                     }
                 }
@@ -141,14 +141,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                 if (!isComponentMountedRef.current) return;
                 console.error('Failed to activate WebSocket:', error);
                 setIsConnected(false);
-                setConnectionError('Failed to connect to chat server. Please refresh the page.');
+                setError('Failed to connect to chat server. Please refresh the page.');
                 connectionAttemptRef.current = false;
             }
         } catch (error) {
             if (!isComponentMountedRef.current) return;
             console.error('Failed to setup WebSocket:', error);
             setIsConnected(false);
-            setConnectionError('Failed to setup chat connection. Please refresh the page.');
+            setError('Failed to setup chat connection. Please refresh the page.');
             connectionAttemptRef.current = false;
         }
     }, [chatId, getToken]);
@@ -188,7 +188,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
                 }
                 clientRef.current = null;
                 setIsConnected(false);
-                setConnectionError(null);
+                setError(null);
                 connectionAttemptRef.current = false;
             }
         };
@@ -211,7 +211,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({userId, chatId}) => {
             console.log('Message published');
         } catch (error) {
             console.error('Error sending message:', error);
-            setConnectionError('Failed to send message. Please try again.');
+            setError('Failed to send message. Please try again.');
         }
     };
 
