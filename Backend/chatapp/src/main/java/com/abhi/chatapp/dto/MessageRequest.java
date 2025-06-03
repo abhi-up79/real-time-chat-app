@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class MessageRequest {
-    private long senderId;
+    private String senderId;  // Auth0 user ID
     private String content;
 }
