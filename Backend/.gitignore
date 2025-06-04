@@ -28,10 +28,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Application specific
-application-local.properties
-application-dev.properties
-application-prod.properties
 
 HELP.md
 .mvn/wrapper/maven-wrapper.jar
