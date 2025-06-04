@@ -25,7 +25,7 @@ USER spring:spring
 COPY --from=build /app/target/*.jar app.jar
 
 # Set environment variables
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:MaxMetaspaceSize=64m -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 # Expose the application port
 EXPOSE 8080
