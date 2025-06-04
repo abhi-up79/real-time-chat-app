@@ -50,7 +50,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-               .setAllowedOrigins("http://localhost:5173", "http://localhost", "http://localhost:80")
+               .setAllowedOrigins(
+                   "http://localhost:5173", 
+                   "http://localhost", 
+                   "http://localhost:80",
+                   "https://chatapp.futurewithai.space"
+               )
                .withSockJS()
                .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js")
                .setWebSocketEnabled(true)

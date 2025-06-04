@@ -37,6 +37,7 @@ public class SecurityConfig {
             .and()
             .csrf().disable()
             .authorizeHttpRequests()
+            .requestMatchers("/actuator/health/**").permitAll()  // Allow health check endpoint
             .requestMatchers("/ws/**").permitAll()  // Allow WebSocket handshake
             .requestMatchers("/api/**").authenticated()
             .anyRequest().authenticated()
@@ -65,7 +66,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost", "http://localhost:80"));
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173", 
+            "http://localhost", 
+            "http://localhost:80",
+            "https://real-time-chat-app-frontend.vercel.app"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",
