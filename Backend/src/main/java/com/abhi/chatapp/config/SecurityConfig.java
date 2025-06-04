@@ -70,7 +70,8 @@ public class SecurityConfig {
             "http://localhost:5173", 
             "http://localhost", 
             "http://localhost:80",
-            "https://real-time-chat-app-frontend.vercel.app"
+            "https://real-time-chat-app-frontend.vercel.app",
+            "https://chatapp.futurewithai.space"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
