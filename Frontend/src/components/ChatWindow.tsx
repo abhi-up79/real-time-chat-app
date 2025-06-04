@@ -3,6 +3,7 @@ import SockJS from "sockjs-client";
 import axios from "axios";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../auth/useAuth";
+import config from '../config/config';
 
 interface Message {
     id: number;
@@ -67,7 +68,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
             }
             
             const client = new Client({
-                webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+                webSocketFactory: () => new SockJS(config.wsUrl),
                 connectHeaders: {
                     Authorization: `Bearer ${token}`
                 },
@@ -189,7 +190,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
             try {
                 const token = await getToken();
                 const response = await axios.get(
-                    `http://localhost:8080/api/chats/${chatId}/messages`,
+                    `${config.apiUrl}/api/chats/${chatId}/messages`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../auth/useAuth";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import config from '../config/config';
 
 interface Chat {
     id: number;
@@ -52,7 +53,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
             }
 
             const client = new Client({
-                webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+                webSocketFactory: () => new SockJS(config.wsUrl),
                 connectHeaders: {
                     Authorization: `Bearer ${token}`
                 },
@@ -126,7 +127,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
                 console.log('Token received:', token ? 'Token exists' : 'No token');
                 
                 const response = await axios.post(
-                    'http://localhost:8080/api/users',
+                    `${config.apiUrl}/api/users`,
                     {
                         email: user.email,
                         name: user.name
@@ -143,7 +144,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
             } catch (err: any) {
                 console.error('Error creating/updating user:', err);
                 console.error('Request details:', {
-                    url: 'http://localhost:8080/api/users',
+                    url: `${config.apiUrl}/api/users`,
                     headers: err.config?.headers,
                     status: err.response?.status,
                     data: err.response?.data
@@ -162,7 +163,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
             try {
                 const token = await getToken();
                 const response = await axios.get(
-                    `http://localhost:8080/api/users/${userId}/chats`,
+                    `${config.apiUrl}/api/users/${userId}/chats`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -207,7 +208,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
             console.log('Creating chat with payload:', requestPayload);
 
             const response = await axios.post(
-                'http://localhost:8080/api/chats',
+                `${config.apiUrl}/api/chats`,
                 requestPayload,
                 {
                     headers: {
