@@ -19,6 +19,7 @@ interface ChatWindowProps {
 
 interface ExtendedClient extends Client {
     subscription?: any;
+    userSubscription?: any;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
@@ -54,6 +55,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
                 try {
                     if (clientRef.current.subscription) {
                         clientRef.current.subscription.unsubscribe();
+                    }
+                    if (clientRef.current.userSubscription) {
+                        clientRef.current.userSubscription.unsubscribe();
                     }
                     clientRef.current.deactivate();
                 } catch (error) {
@@ -110,24 +114,51 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
                 // Subscribe to the chat topic
                 if (client) {
                     try {
+                        // Subscribe to general chat topic
                         console.log('Subscribing to chat topic:', `/topic/chat/${chatId}`);
                         const subscription = client.subscribe(`/topic/chat/${chatId}`, (message) => {
                             if (!isComponentMountedRef.current) return;
                             try {
-                                console.log('Received message:', message.body);
+                                console.log('Received message from chat topic:', message.body);
                                 const msg: Message = JSON.parse(message.body);
-                                setMessages((prev) => [...prev, msg]);
+                                setMessages((prev) => {
+                                    // Check if message already exists
+                                    if (prev.some(m => m.id === msg.id)) {
+                                        return prev;
+                                    }
+                                    return [...prev, msg];
+                                });
                             } catch (error) {
                                 console.error('Error processing message:', error);
                             }
                         });
 
-                        // Store subscription for cleanup
+                        // Subscribe to user-specific queue
+                        console.log('Subscribing to user queue:', `/user/queue/chat/${chatId}`);
+                        const userSubscription = client.subscribe(`/user/queue/chat/${chatId}`, (message) => {
+                            if (!isComponentMountedRef.current) return;
+                            try {
+                                console.log('Received message from user queue:', message.body);
+                                const msg: Message = JSON.parse(message.body);
+                                setMessages((prev) => {
+                                    // Check if message already exists
+                                    if (prev.some(m => m.id === msg.id)) {
+                                        return prev;
+                                    }
+                                    return [...prev, msg];
+                                });
+                            } catch (error) {
+                                console.error('Error processing user message:', error);
+                            }
+                        });
+
+                        // Store subscriptions for cleanup
                         client.subscription = subscription;
+                        client.userSubscription = userSubscription;
                         clientRef.current = client;
-                        console.log('Successfully subscribed to chat topic');
+                        console.log('Successfully subscribed to chat topic and user queue');
                     } catch (error) {
-                        console.error('Error subscribing to chat topic:', error);
+                        console.error('Error subscribing to chat:', error);
                         setError('Failed to subscribe to chat. Please refresh the page.');
                         connectionAttemptRef.current = false;
                     }
@@ -182,6 +213,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
                     if (clientRef.current.subscription) {
                         clientRef.current.subscription.unsubscribe();
                     }
+                    if (clientRef.current.userSubscription) {
+                        clientRef.current.userSubscription.unsubscribe();
+                    }
                     clientRef.current.deactivate();
                 } catch (error) {
                     console.error('Error deactivating WebSocket:', error);
@@ -195,23 +229,45 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
     }, [chatId, getToken, setupWebSocket]);
 
     const sendMessage = async () => {
-        if (!userId || !newMessage || !clientRef.current?.active) {
-            console.log('Cannot send message:', { userId, newMessage, active: clientRef.current?.active });
+        if (!userId || !newMessage.trim() || !clientRef.current?.active) {
+            console.log('Cannot send message:', { 
+                userId, 
+                messageLength: newMessage?.length, 
+                active: clientRef.current?.active 
+            });
             return;
         }
 
-        const payload = { senderId: userId, content: newMessage };
+        const payload = { 
+            senderId: userId, 
+            content: newMessage.trim() 
+        };
+        
         console.log('Publishing message:', payload);
         try {
+            if (!clientRef.current.connected) {
+                throw new Error('WebSocket not connected');
+            }
+
             await clientRef.current.publish({
                 destination: `/app/chat/${chatId}`,
                 body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json'
+                }
             });
+            
             setNewMessage('');
-            console.log('Message published');
+            console.log('Message published successfully');
         } catch (error) {
             console.error('Error sending message:', error);
             setError('Failed to send message. Please try again.');
+            
+            // Attempt to reconnect if connection is lost
+            if (!clientRef.current.connected) {
+                console.log('Connection lost, attempting to reconnect...');
+                setupWebSocket();
+            }
         }
     };
 

@@ -37,7 +37,7 @@ public class SecurityConfig {
             .and()
             .csrf().disable()
             .authorizeHttpRequests()
-            .requestMatchers("/chat/**", "/ws/**", "/topic/**", "/app/**", "/chat/info/**").permitAll()
+            .requestMatchers("/ws/**").permitAll()  // Allow WebSocket handshake
             .requestMatchers("/api/**").authenticated()
             .anyRequest().authenticated()
             .and()

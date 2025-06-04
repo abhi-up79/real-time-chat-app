@@ -2,14 +2,20 @@ services:
   frontend:
     build:
       context: ./Frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_API_URL=${API_URL}
+        - VITE_WS_URL=${WS_URL}
+        - VITE_AUTH0_DOMAIN=${AUTH0_DOMAIN}
+        - VITE_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
+        - VITE_AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
       - chat-network
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
@@ -19,14 +25,14 @@ services:
   backend:
     build:
       context: ./Backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - DATABASE_URL=jdbc:postgresql://postgres:5432/chatapp
-      - PGUSER=chatapp_user
-      - PGPASSWORD=chatapp_password
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=${DATABASE_URL}
+      - PGUSER=${DB_USER}
+      - PGPASSWORD=${DB_PASSWORD}
       - AUTH0_ISSUER_URI=${AUTH0_ISSUER_URI}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
     depends_on:
@@ -34,7 +40,7 @@ services:
         condition: service_healthy
     networks:
       - chat-network
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -44,25 +50,23 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_DB=chatapp
-      - POSTGRES_USER=chatapp_user
-      - POSTGRES_PASSWORD=chatapp_password
-    ports:
-      - "5432:5432"
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - chat-network
-    restart: unless-stopped
+    restart: always
     command: >
       -c shared_buffers=256MB
-      -c max_connections=1000
+      -c max_connections=200
       -c effective_cache_size=768MB
       -c maintenance_work_mem=64MB
       -c random_page_cost=1.1
       -c work_mem=4MB
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chatapp_user -d chatapp"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

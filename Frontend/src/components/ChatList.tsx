@@ -193,13 +193,22 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
                 return;
             }
 
+            // Generate chat name based on type
+            const chatName = emails.length > 1 
+                ? 'Group Chat' 
+                : `Chat with ${emails[0]}`;
+
+            const requestPayload = {
+                type: emails.length > 1 ? 'group' : 'private',
+                name: chatName,
+                userEmails: emails,
+            };
+
+            console.log('Creating chat with payload:', requestPayload);
+
             const response = await axios.post(
                 'http://localhost:8080/api/chats',
-                {
-                    type: emails.length > 1 ? 'group' : 'private',
-                    name: emails.length > 1 ? 'Group Chat' : undefined,
-                    userEmails: emails,
-                },
+                requestPayload,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -207,11 +216,17 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
                     }
                 }
             );
+            console.log('Chat creation response:', response.data);
             setChats([...chats, response.data]);
             setNewChatEmails('');
             setError('');
         } catch (err: any) {
             console.error('Error creating chat:', err);
+            console.error('Error details:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status
+            });
             setError(err.response?.data || 'Failed to create chat');
         }
     };

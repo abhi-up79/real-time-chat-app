@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,6 +24,7 @@ import com.abhi.chatapp.repository.ChatMemberRepository;
 import com.abhi.chatapp.repository.ChatRepository;
 import com.abhi.chatapp.repository.MessageRepository;
 import com.abhi.chatapp.repository.UserRepository;
+import com.abhi.chatapp.service.InMemoryMessageBroker;
 
 @RestController
 @RequestMapping("/api")
@@ -42,7 +42,7 @@ public class ChatController {
     @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
     @Autowired
-    private KafkaTemplate<String, Message> kafkaTemplate;
+    private InMemoryMessageBroker messageBroker;
 
     @PostMapping("/users")
     public ResponseEntity<?> createOrUpdateUser(@AuthenticationPrincipal Jwt jwt, @RequestBody User userRequest) {
@@ -111,10 +111,17 @@ public class ChatController {
                     .body("Current user not found. Please ensure you are registered.");
             }
 
+            // Validate chat name
+            if (request.getName() == null || request.getName().trim().isEmpty()) {
+                logger.warn("Chat creation failed: Chat name is required");
+                return ResponseEntity.badRequest()
+                    .body("Chat name is required");
+            }
+
             // Create chat
             Chat chat = new Chat();
             chat.setType(request.getType());
-            chat.setName(request.getName());
+            chat.setName(request.getName().trim());
             Chat savedChat = chatRepository.save(chat);
             logger.info("Created new chat with ID: {}, type: {}, name: {}", 
                 savedChat.getId(), savedChat.getType(), savedChat.getName());
@@ -188,23 +195,31 @@ public class ChatController {
 
     @MessageMapping("/chat/{chatId}")
     public void sendMessage(@DestinationVariable Long chatId, MessageRequest messageRequest) {
-        logger.debug("Received WebSocket message for chatId: {}, senderId: {}", 
-            chatId, messageRequest.getSenderId());
+        logger.debug("Received WebSocket message for chatId: {}, senderId: {}, content: {}", 
+            chatId, messageRequest.getSenderId(), messageRequest.getContent());
         
         try {
+            // Find chat and validate user is a member
+            Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+            
+            String senderId = messageRequest.getSenderId();
+            boolean isMember = chatMemberRepository.existsByChatIdAndUserId(chatId, senderId);
+            if (!isMember) {
+                logger.error("User {} is not a member of chat {}", senderId, chatId);
+                throw new SecurityException("User is not a member of this chat");
+            }
+
+            // Create and save message
             Message message = new Message();
-            message.setChat(chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found")));
-            message.setSender(userRepository.findById(messageRequest.getSenderId())
+            message.setChat(chat);
+            message.setSender(userRepository.findById(senderId)
                 .orElseThrow(() -> new RuntimeException("Sender not found")));
             message.setContent(messageRequest.getContent());
             message.setTimestamp(LocalDateTime.now());
 
-            kafkaTemplate.send("message_persist", message);
-            logger.debug("Message sent to Kafka for persistence");
-            
-            simpMessagingTemplate.convertAndSend("/topic/chat/" + chatId, message);
-            logger.debug("Message broadcast to chat {}: {}", chatId, message.getContent());
+            messageBroker.handleMessage(message);
+            logger.debug("Message processed successfully: chatId={}, senderId={}", chatId, senderId);
         } catch (Exception e) {
             logger.error("Error sending message to chat {}: {}", chatId, e.getMessage(), e);
             simpMessagingTemplate.convertAndSend("/topic/chat/" + chatId + "/error", 

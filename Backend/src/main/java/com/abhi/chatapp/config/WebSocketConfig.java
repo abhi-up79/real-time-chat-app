@@ -24,23 +24,27 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.authorization.AuthorizationManager;
-import org.springframework.security.messaging.access.intercept.MessageMatcherDelegatingAuthorizationManager;
-import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
-import org.springframework.security.core.authority.AuthorityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSocketMessageBroker
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+
     @Autowired
     private JwtDecoder jwtDecoder;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        // Enable simple broker for in-memory messaging
+        config.enableSimpleBroker("/topic", "/queue", "/user");
         config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
@@ -60,86 +64,93 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
+            private JwtAuthenticationToken getAuthenticationFromAccessor(StompHeaderAccessor accessor) {
+                if (accessor.getUser() instanceof JwtAuthenticationToken) {
+                    return (JwtAuthenticationToken) accessor.getUser();
+                }
+                return null;
+            }
+
             @Override
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
-                StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
-                String sessionId = accessor.getSessionId();
-                StompCommand command = accessor.getCommand();
-                System.out.println("[WebSocket] preSend: Command=" + command + ", SessionId=" + sessionId);
-                System.out.println("[WebSocket] preSend: User=" + accessor.getUser());
-                if (accessor.getSessionAttributes() != null) {
-                    Object auth = accessor.getSessionAttributes().get("SPRING.AUTHENTICATION");
-                    System.out.println("[WebSocket] preSend: SPRING.AUTHENTICATION=" + auth);
-                } else {
-                    System.out.println("[WebSocket] preSend: No session attributes");
+                StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                if (accessor == null) {
+                    return message;
                 }
 
-                if (StompCommand.CONNECT.equals(command)) {
+                logger.debug("Processing STOMP message: command={}, destination={}, headers={}",
+                    accessor.getCommand(), accessor.getDestination(), accessor.toNativeHeaderMap());
+
+                if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String token = accessor.getFirstNativeHeader("Authorization");
-                    System.out.println("Received WebSocket connection request");
-
                     if (token != null && token.startsWith("Bearer ")) {
+                        token = token.substring(7);
                         try {
-                            token = token.substring(7);
-                            System.out.println("Processing token for WebSocket connection");
                             Jwt jwt = jwtDecoder.decode(token);
-                            JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt, AuthorityUtils.createAuthorityList("ROLE_USER"));
-
-                            // Store authentication in session attributes
-                            accessor.setUser(auth);
-                            if (accessor.getSessionAttributes() != null) {
-                                accessor.getSessionAttributes().put("SPRING.AUTHENTICATION", auth);
-                            }
-
-                            // Set SecurityContext for this thread
-                            SecurityContext context = new SecurityContextImpl();
-                            context.setAuthentication(auth);
+                            JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt, Collections.emptyList(), jwt.getSubject());
+                            SecurityContext context = new SecurityContextImpl(auth);
                             SecurityContextHolder.setContext(context);
-
-                            System.out.println("[WebSocket] CONNECT: Authenticated user=" + jwt.getSubject());
-                            return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
+                            accessor.setUser(auth);
+                            logger.debug("CONNECT: Successfully authenticated user: {}. isAuthenticated: {}. SecurityContextHolder updated.", auth.getName(), auth.isAuthenticated());
                         } catch (Exception e) {
-                            System.err.println("WebSocket authentication failed: " + e.getMessage());
-                            e.printStackTrace();
-
-                            // Add error header for debugging
-                            accessor.setHeader("X-Auth-Error", e.getMessage());
+                            logger.error("CONNECT: Error processing JWT token: {}", e.getMessage(), e);
                             return null;
                         }
                     } else {
-                        System.err.println("No valid Authorization header found in WebSocket connection");
-                        accessor.setHeader("X-Auth-Error", "No valid Authorization header");
+                        logger.warn("CONNECT: No valid Authorization header found.");
                         return null;
                     }
-                } else {
-                    // For SUBSCRIBE/SEND/etc: restore authentication from session
-                    if (accessor.getSessionAttributes() != null) {
-                        Object auth = accessor.getSessionAttributes().get("SPRING.AUTHENTICATION");
-                        if (auth instanceof JwtAuthenticationToken) {
-                            accessor.setUser((JwtAuthenticationToken) auth);
-
-                            // Set SecurityContext for this thread
-                            SecurityContext context = new SecurityContextImpl();
-                            context.setAuthentication((JwtAuthenticationToken) auth);
-                            SecurityContextHolder.setContext(context);
-                            System.out.println("[WebSocket] " + command + ": Restored authentication for user=" + ((JwtAuthenticationToken) auth).getName());
-                        } else {
-                            System.out.println("[WebSocket] " + command + ": No valid authentication in session attributes");
-                        }
+                } else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand()) || 
+                          StompCommand.SEND.equals(accessor.getCommand())) {
+                    // Restore authentication from session if available
+                    JwtAuthenticationToken sessionAuth = getAuthenticationFromAccessor(accessor);
+                    if (sessionAuth != null) {
+                        SecurityContext context = new SecurityContextImpl(sessionAuth);
+                        SecurityContextHolder.setContext(context);
+                        logger.debug("{}: Restored authentication for user: {}. isAuthenticated: {}", 
+                                   accessor.getCommand(), sessionAuth.getName(), sessionAuth.isAuthenticated());
                     } else {
-                        System.out.println("[WebSocket] " + command + ": No session attributes");
+                        logger.error("{}: No authentication found in session", accessor.getCommand());
+                        return null;
                     }
+                }
+
+                // Diagnostic log at the end of preSend for all commands
+                Authentication authInHolder = SecurityContextHolder.getContext().getAuthentication();
+                if (authInHolder != null) {
+                    logger.debug("Exiting preSend for command {}. Auth in SCH: name={}, isAuthenticated={}, type={}",
+                        accessor.getCommand(), authInHolder.getName(), authInHolder.isAuthenticated(), authInHolder.getClass().getName());
+                } else {
+                    logger.debug("Exiting preSend for command {}. Auth in SCH is NULL.", accessor.getCommand());
                 }
                 return message;
             }
+
+            @Override
+            public void afterSendCompletion(Message<?> message, MessageChannel channel, boolean sent, Exception ex) {
+                if (ex != null) {
+                    logger.error("Error sending message: {}", ex.getMessage(), ex);
+                    if (message != null) {
+                        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                        if (accessor != null) {
+                            logger.error("Failed message details - Command: {}, Destination: {}, Headers: {}",
+                                accessor.getCommand(), accessor.getDestination(), accessor.toNativeHeaderMap());
+                        }
+                    }
+                }
+            }
         });
 
-        // Configure authorization
-        MessageMatcherDelegatingAuthorizationManager.Builder messages = MessageMatcherDelegatingAuthorizationManager.builder();
-        messages
-            .simpDestMatchers("/app/**").authenticated()  // Require authentication for /app/**
-            .simpSubscribeDestMatchers("/topic/**").authenticated()  // Require authentication for /topic/**
-            .anyMessage().permitAll();  // Allow all other messages
+        // Configure message authorization (order is important: most specific to least specific)
+        MessageMatcherDelegatingAuthorizationManager.Builder messages = MessageMatcherDelegatingAuthorizationManager.builder()
+            .simpDestMatchers("/app/**").authenticated()
+            .simpSubscribeDestMatchers("/user/queue/chat/**").authenticated() 
+            .simpSubscribeDestMatchers("/user/queue/**").authenticated()    
+            .simpSubscribeDestMatchers("/topic/user/**").authenticated()  
+            .simpSubscribeDestMatchers("/user/**").authenticated()          
+            .simpSubscribeDestMatchers("/queue/**").authenticated()         
+            .simpSubscribeDestMatchers("/topic/chat/**").permitAll()     
+            .anyMessage().permitAll(); 
 
         registration.interceptors(new AuthorizationChannelInterceptor(messages.build()));
     }

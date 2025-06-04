@@ -2,6 +2,8 @@ package com.abhi.chatapp.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import java.util.List;
 
 @Entity
 @Table(name = "chats")
@@ -13,4 +15,8 @@ public class Chat {
 
     private String type;
     private String name;
+
+    @OneToMany(mappedBy = "chat")
+    @JsonManagedReference
+    private List<Message> messages;
 }

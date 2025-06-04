@@ -11,6 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Table(name = "messages")
@@ -25,6 +27,7 @@ public class Message implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "chat_id")
+    @JsonBackReference
     private Chat chat;
 
     @ManyToOne
