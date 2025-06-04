@@ -233,7 +233,7 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
     };
 
     return (
-        <div className="w-full md:w-1/4 bg-white border-r p-4 h-full overflow-y-auto">
+        <div className="w-full md:w-80 lg:w-96 bg-white border-r p-4 h-full overflow-y-auto">
             <h2 className="text-xl font-bold mb-6 text-gray-800">Messages</h2>
             <div className="mb-6">
                 <input

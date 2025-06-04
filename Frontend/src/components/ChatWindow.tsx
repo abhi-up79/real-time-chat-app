@@ -273,7 +273,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-gray-50">
+        <div className="flex-1 flex flex-col h-full bg-gray-50 relative">
             {!isConnected && (
                 <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 m-4 rounded-lg shadow-sm" role="alert">
                     <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
                     </div>
                 </div>
             )}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ scrollBehavior: 'smooth' }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20" style={{ scrollBehavior: 'smooth' }}>
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
@@ -321,7 +321,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
                     </div>
                 )}
             </div>
-            <div className="p-4 bg-white border-t">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t">
                 <div className="flex gap-2 max-w-4xl mx-auto">
                     <input
                         type="text"
