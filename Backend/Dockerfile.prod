@@ -23,6 +23,9 @@ WORKDIR /app
 # Copy built jar from build stage
 COPY --from=build /app/target/*.jar app.jar
 
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+
+
 # Expose port 8080
 EXPOSE 8080
 
