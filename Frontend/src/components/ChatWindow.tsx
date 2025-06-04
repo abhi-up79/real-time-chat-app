@@ -273,44 +273,79 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ userId, chatId }) => {
     };
 
     return (
-        <div className="flex-1 flex flex-col p-4">
+        <div className="flex-1 flex flex-col h-full bg-gray-50">
             {!isConnected && (
-                <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4" role="alert">
-                    <p>Connecting to chat server...</p>
+                <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 m-4 rounded-lg shadow-sm" role="alert">
+                    <div className="flex items-center gap-2">
+                        <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p>Connecting to chat server...</p>
+                    </div>
                 </div>
             )}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ scrollBehavior: 'smooth' }}>
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
-                        className={`mb-2 p-2 rounded ${
-                            userId && msg.sender.id === userId ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
-                        }`}
+                        className={`flex ${userId && msg.sender.id === userId ? 'justify-end' : 'justify-start'}`}
                     >
-                        <p>{msg.content}</p>
-                        <small>{new Date(msg.timestamp).toLocaleTimeString()}</small>
+                        <div
+                            className={`max-w-[80%] md:max-w-[60%] rounded-lg px-4 py-2 shadow-sm ${
+                                userId && msg.sender.id === userId
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-white text-gray-800 rounded-bl-none'
+                            }`}
+                        >
+                            <p className="break-words">{msg.content}</p>
+                            <div className={`text-xs mt-1 ${
+                                userId && msg.sender.id === userId ? 'text-blue-100' : 'text-gray-500'
+                            }`}>
+                                {new Date(msg.timestamp).toLocaleTimeString([], { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                })}
+                            </div>
+                        </div>
                     </div>
                 ))}
+                {messages.length === 0 && (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <p>No messages yet. Start the conversation!</p>
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="flex">
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 p-2 border rounded"
-                    placeholder="Type a message"
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    disabled={!isConnected}
-                />
-                <button 
-                    onClick={sendMessage} 
-                    className={`ml-2 p-2 rounded ${
-                        isConnected ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-500'
-                    }`}
-                    disabled={!isConnected}
-                >
-                    Send
-                </button>
+            <div className="p-4 bg-white border-t">
+                <div className="flex gap-2 max-w-4xl mx-auto">
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Type your message..."
+                        disabled={!isConnected}
+                    />
+                    <button 
+                        onClick={sendMessage} 
+                        className={`px-6 rounded-lg flex items-center justify-center transition-colors duration-200 ${
+                            isConnected 
+                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        disabled={!isConnected}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     );

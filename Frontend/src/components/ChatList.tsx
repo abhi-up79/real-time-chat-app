@@ -233,40 +233,65 @@ const ChatList: React.FC<ChatListProps> = ({userId, onSelectChat}) => {
     };
 
     return (
-        <div className="w-1/4 bg-white border-r p-4">
-            <h2 className="text-lg font-bold mb-4">Chats</h2>
-            <div className="mb-4">
+        <div className="w-full md:w-1/4 bg-white border-r p-4 h-full overflow-y-auto">
+            <h2 className="text-xl font-bold mb-6 text-gray-800">Messages</h2>
+            <div className="mb-6">
                 <input
                     type="text"
-                    placeholder="User emails (comma separated)"
+                    placeholder="Enter email addresses..."
                     value={newChatEmails}
                     onChange={(e) => setNewChatEmails(e.target.value)}
-                    className="w-full p-2 border rounded mb-2"
+                    className="w-full p-3 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button 
                     onClick={createChat} 
-                    className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                    className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2 disabled:bg-gray-400"
                     disabled={!isUserCreated}
                 >
-                    Create Chat
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    New Chat
                 </button>
             </div>
             {error && (
-                <div className="text-red-500 mb-4 text-sm">
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-200">
                     {error}
                 </div>
             )}
-            <ul className="space-y-2">
+            <div className="space-y-2">
                 {chats.map((chat) => (
-                    <li
+                    <div
                         key={chat.id}
                         onClick={() => onSelectChat(chat.id)}
-                        className="p-2 hover:bg-gray-200 cursor-pointer rounded"
+                        className="p-3 hover:bg-gray-50 cursor-pointer rounded-lg transition-colors duration-200 border border-gray-100 flex items-center gap-3"
                     >
-                        {chat.name || `Chat ${chat.id}`}
-                    </li>
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                            {chat.type === 'group' ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-medium text-gray-800">{chat.name || `Chat ${chat.id}`}</h3>
+                            <p className="text-sm text-gray-500">{chat.type === 'group' ? 'Group Chat' : 'Private Chat'}</p>
+                        </div>
+                    </div>
                 ))}
-            </ul>
+                {chats.length === 0 && !error && (
+                    <div className="text-center py-8 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <p>No chats yet. Start a new conversation!</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
