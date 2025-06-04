@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Set environment variables
-ENV JAVA_OPTS="-Xms32m -Xmx64m -XX:MaxMetaspaceSize=64m -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENV JAVA_OPTS="-Xms32m -Xmx64m -XX:MaxMetaspaceSize=128m -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 # Expose the application port
 EXPOSE 8080
